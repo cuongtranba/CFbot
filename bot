@@ -1,0 +1,73 @@
+from selenium import webdriver
+from selenium.webdriver.support.ui import Select
+from PIL import Image
+import pytesseract
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from utilities import UsersGenerator
+import json
+
+selector_register = {
+    'full_name': '#FullName',
+    'phone_number': '#Phone',
+    'user_name': '#UserNameReg',
+    'password': '#Password',
+    'email': '#Email',
+    'secret_code': '#AccountCode',
+    'answer': '#Answer',
+    'comfirm_password': '#ConfirmPassword',
+    'secret_question': '#Question',
+    'Address': '#Address',
+    'captcha': '#Scode'
+}
+
+UsersGenerator(10)
+
+
+def get_captcha_register_page():
+    driver.save_screenshot("register_screenshot.png")
+    im = Image.open("register_screenshot.png")
+    im.crop((803, 732, 1362, 902)).save('register_captcha.png')
+    im_captcha_string = Image.open('register_captcha.png')
+    return pytesseract.image_to_string(im_captcha_string)
+
+
+def get_user_file():
+    user_file = open('user.txt', 'r')
+    jusers = json.loads(user_file.read())
+    user_file.close()
+    return jusers
+
+
+def register_user():
+    jusers = get_user_file()
+    for item in jusers:
+        for k, v in selector_register.items():
+            selected_element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, v)))
+            if k == 'secret_question':
+                select = Select(selected_element)
+                select.select_by_value(item[k])
+            elif k == 'captcha':
+                selected_element.send_keys(get_captcha_register_page())
+            else:
+                selected_element.send_keys(item[k])
+        submit_button = driver.find_element_by_css_selector(
+            "body > div > div > form > div.content_register > div > div:nth-child(5) > div:nth-child(12) > input")
+        submit_button.click()
+        button_logout = driver.find_element_by_css_selector("div.list_menu:nth-child(2) > ul:nth-child(2) > li:nth-child(3) > a:nth-child(2)")
+        button_logout.click()
+        """need to refactor"""
+        buttonRegister = driver.find_element_by_css_selector(".menu > li:nth-child(3) > a:nth-child(1)")
+        buttonRegister.click()
+
+driver = webdriver.Firefox()
+driver.get("http://vuadotkich.myvnc.com/")
+button_register = driver.find_element_by_css_selector("body > div.mc.menu-top > div > a.btn_dk")
+button_register.click()
+register_user()
+
+
+
+
+
