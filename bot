@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from utilities import UsersGenerator
+from utilities import check_exists_by_css_selector
 import json
 
 selector_register = {
@@ -22,13 +23,17 @@ selector_register = {
     'captcha': '#Scode'
 }
 
-UsersGenerator(10)
+UsersGenerator(50)
 
 
 def get_captcha_register_page():
     driver.save_screenshot("register_screenshot.png")
     im = Image.open("register_screenshot.png")
-    im.crop((803, 732, 1362, 902)).save('register_captcha.png')
+    width, height = im.size
+    if width == 800 and height == 965:
+        im.crop((534, 785, 590, 812)).save('register_captcha.png')
+    else:
+        im.crop((534, 756, 590, 771)).save('register_captcha.png')
     im_captcha_string = Image.open('register_captcha.png')
     return pytesseract.image_to_string(im_captcha_string)
 
@@ -40,9 +45,25 @@ def get_user_file():
     return jusers
 
 
+def submit_register_user():
+    submit_button = driver.find_element_by_css_selector(
+        "body > div > div > form > div.content_register > div > div:nth-child(5) > div:nth-child(12) > input")
+    submit_button.click()
+
+
+def fill_password(password):
+    password_textbox = driver.find_element_by_css_selector("#Password")
+    password_textbox.clear()
+    password_textbox.send_keys(password)
+    password_comfirm = driver.find_element_by_css_selector("#ConfirmPassword")
+    password_comfirm.clear()
+    password_comfirm.send_keys(password)
+
+
 def register_user():
     jusers = get_user_file()
     for item in jusers:
+        password = None
         for k, v in selector_register.items():
             selected_element = WebDriverWait(driver, 3).until(EC.presence_of_element_located((By.CSS_SELECTOR, v)))
             if k == 'secret_question':
@@ -51,23 +72,34 @@ def register_user():
             elif k == 'captcha':
                 selected_element.send_keys(get_captcha_register_page())
             else:
+                if k == "password":
+                    password = item[k]
                 selected_element.send_keys(item[k])
-        submit_button = driver.find_element_by_css_selector(
-            "body > div > div > form > div.content_register > div > div:nth-child(5) > div:nth-child(12) > input")
-        submit_button.click()
-        button_logout = driver.find_element_by_css_selector("div.list_menu:nth-child(2) > ul:nth-child(2) > li:nth-child(3) > a:nth-child(2)")
+        submit_register_user()
+
+        while check_exists_by_css_selector(driver,
+                                           ".validation-summary-errors > ul:nth-child(1) > li:nth-child(1)") or check_exists_by_css_selector(
+            driver,
+            ".field-validation-error > span:nth-child(1)"):
+            captcha_button = driver.find_element_by_css_selector(".CallReloadCaptcha")
+            captcha_element = driver.find_element_by_css_selector("#Scode")
+            captcha_button.click()
+            captcha_element.clear()
+            captcha_element.send_keys(get_captcha_register_page())
+            fill_password(password)
+            submit_register_user()
+
+        button_logout = driver.find_element_by_css_selector(
+            "div.list_menu:nth-child(2) > ul:nth-child(2) > li:nth-child(3) > a:nth-child(2)")
         button_logout.click()
         """need to refactor"""
         buttonRegister = driver.find_element_by_css_selector(".menu > li:nth-child(3) > a:nth-child(1)")
         buttonRegister.click()
 
+
 driver = webdriver.Firefox()
+driver.set_window_size(800, 600)
 driver.get("http://vuadotkich.myvnc.com/")
 button_register = driver.find_element_by_css_selector("body > div.mc.menu-top > div > a.btn_dk")
 button_register.click()
 register_user()
-
-
-
-
-

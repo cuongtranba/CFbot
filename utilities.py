@@ -1,6 +1,7 @@
 import string
 import random
 import json
+from selenium.common.exceptions import NoSuchElementException
 
 
 def StringGenerator(length):
@@ -36,3 +37,10 @@ def UsersGenerator(number):
     with open("user.txt", "w") as users_file:
         users_file.write(json.dumps(users))
 
+
+def check_exists_by_css_selector(driver, selector):
+    try:
+        driver.find_element_by_css_selector(selector)
+    except NoSuchElementException:
+        return False
+    return True
